@@ -1664,6 +1664,12 @@ export async function loadDataFromSupabaseWithClient(
       )
     : { data: [], error: null };
   const cloudCrews = (crewsResult.data ?? []) as CloudCrewRow[];
+  const cloudCrewIds = new Set(cloudCrews.map((crew) => crew.id));
+  const normalizedCloudWorkers = includeHr
+    ? cloudWorkers.map((worker) =>
+        worker.crew_id && !cloudCrewIds.has(worker.crew_id) ? { ...worker, crew_id: null } : worker
+      )
+    : cloudWorkers;
 
   const laborExpensesResult = includeHr
     ? await runCloudOperation(
@@ -1697,7 +1703,7 @@ export async function loadDataFromSupabaseWithClient(
       boqCategories: cloudCategories,
       boqItems: cloudItems,
       dailyReports: cloudReports,
-      dailyReportWorkers: cloudWorkers,
+      dailyReportWorkers: normalizedCloudWorkers,
       dailyReportProgressUpdates: cloudProgressUpdates,
       hrCrews: cloudCrews,
       hrLaborExpenses: cloudLaborExpenses,
@@ -1775,7 +1781,7 @@ export async function loadDataFromSupabaseWithClient(
     nextPlan: report.next_plan ?? "",
     customerNote: report.customer_note ?? "",
     internalNote: report.internal_note ?? "",
-    workers: cloudWorkers
+    workers: normalizedCloudWorkers
       .filter((worker) => worker.report_id === report.id)
       .map((worker) => ({
         id: worker.id,

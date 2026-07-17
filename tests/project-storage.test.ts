@@ -1364,6 +1364,70 @@ describe("project storage daily report compatibility", () => {
     });
   });
 
+  it("loads legacy Daily Report workers after clearing missing optional crew references", async () => {
+    const rowsByTable: Record<string, unknown[]> = {
+      projects: [{ id: "project-cloud", company_id: "company-1", name: "Cloud Project" }],
+      boq_categories: [],
+      boq_items: [],
+      daily_reports: [
+        {
+          id: "report-cloud",
+          company_id: "company-1",
+          project_id: "project-cloud",
+          report_date: "2026-05-28",
+          problem_issues: [],
+          photos: []
+        }
+      ],
+      daily_report_workers: [
+        {
+          id: "worker-cloud",
+          company_id: "company-1",
+          project_id: "project-cloud",
+          report_id: "report-cloud",
+          crew_id: "crew-no-longer-exists",
+          name: "ทีมช่างเดิม",
+          count: 1,
+          task_status: "ดำเนินการ"
+        }
+      ],
+      daily_report_progress_updates: [],
+      hr_crews: [],
+      hr_labor_expenses: [],
+      buyin_entries: []
+    };
+    const client = {
+      from: (table: string) => {
+        const query = {
+          select: () => query,
+          eq: () => query,
+          in: () => query,
+          order: async () => ({ data: rowsByTable[table] ?? [], error: null }),
+          maybeSingle: async () => ({
+            data: {
+              id: "company-1",
+              name: "บริษัทของฉัน",
+              slug: null,
+              owner_user_id: null,
+              created_at: "2026-05-10T00:00:00.000Z",
+              updated_at: "2026-05-10T00:00:00.000Z"
+            },
+            error: null
+          })
+        };
+        return query;
+      }
+    };
+
+    const loaded = await loadDataFromSupabaseWithClient(client as never, "company-1");
+
+    expect(loaded.dailyReports[0].workers[0]).toMatchObject({
+      id: "worker-cloud",
+      name: "ทีมช่างเดิม",
+      crewId: undefined
+    });
+  });
+
   it("rejects malformed cloud child rows before merging them into local data", async () => {
     const rowsByTable: Record<string, unknown[]> = {
       projects: [
