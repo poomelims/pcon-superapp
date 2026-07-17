@@ -708,6 +708,18 @@ describe("project storage daily report compatibility", () => {
     expect(payload.dailyReportProgressUpdates[0].company_id).toBe("company-1");
   });
 
+  it("drops a dangling Daily Report crew reference from the cloud payload", () => {
+    const report = buildPriorReport();
+    report.workers = report.workers.map((worker) => ({
+      ...worker,
+      crewId: "crew-that-no-longer-exists"
+    }));
+
+    const payload = createCloudSyncPayload(buildSyncData({ dailyReports: [report], crews: [] }));
+
+    expect(payload.dailyReportWorkers[0].crew_id).toBeNull();
+  });
+
   it("keeps daily report workers and progress updates unique for one Supabase upsert batch", () => {
     const firstReport = buildPriorReport();
     const secondReport = {
@@ -855,6 +867,51 @@ describe("project storage daily report compatibility", () => {
     expect(calls).toContain("hr_labor_expenses.upsert");
     expect((scopedHrPayload as typeof scopedHrPayload & { diagnostics?: { counts: { hrCrews?: number; hrLaborExpenses?: number } } }).diagnostics?.counts.hrCrews).toBe(1);
     expect((scopedHrPayload as typeof scopedHrPayload & { diagnostics?: { counts: { hrCrews?: number; hrLaborExpenses?: number } } }).diagnostics?.counts.hrLaborExpenses).toBe(1);
+  });
+
+  it("does not send HR crew references in a project-scoped Daily Report sync without HR permission", async () => {
+    const crew = createCrew("company-1", {
+      leaderName: "ทีมช่างอ้างอิง",
+      nationalId: "1101700234567",
+      workTypes: ["ทั่วไป"]
+    });
+    const report = buildPriorReport();
+    report.workers = report.workers.map((worker) => ({ ...worker, crewId: crew.id }));
+    let syncedWorkers: Array<{ crew_id: string | null }> = [];
+    const client = {
+      from: (table: string) => {
+        if (table === "projects") {
+          return {
+            upsert: async () => ({ data: [], error: null }),
+            select: () => ({
+              eq: () => ({
+                in: async () => ({ data: [{ id: project.id }], error: null })
+              })
+            }),
+            delete: () => ({ eq: async () => ({ data: [], error: null }) })
+          };
+        }
+
+        return {
+          upsert: async (rows: Array<{ crew_id: string | null }>) => {
+            if (table === "daily_report_workers") {
+              syncedWorkers = rows;
+            }
+            return { data: [], error: null };
+          },
+          delete: () => ({ eq: async () => ({ data: [], error: null }) })
+        };
+      }
+    };
+
+    await syncDataToSupabaseWithClient(client as never, buildSyncData({ dailyReports: [report], crews: [crew] }), {
+      allowedProjectIds: [project.id],
+      canDeleteMissingRows: false,
+      includeCompanyHr: false
+    });
+
+    expect(syncedWorkers).toHaveLength(1);
+    expect(syncedWorkers[0].crew_id).toBeNull();
   });
 
   it("allows HR-only cloud sync for HR users without assigned projects and keeps it upsert-only", async () => {

@@ -922,7 +922,7 @@ export function createCloudSyncPayload(
         company_id: report.companyId,
         project_id: report.projectId,
         report_id: report.id,
-        crew_id: worker.crewId ?? null,
+        crew_id: worker.crewId && crewIds.has(worker.crewId) ? worker.crewId : null,
         name: worker.name,
         trade: worker.trade,
         count: worker.count,
@@ -1351,7 +1351,11 @@ export async function syncDataToSupabaseWithClient(
         boqCategories: boqSectionAllowed ? payload.boqCategories.filter((category) => allowedProjectIdSet.has(category.project_id)) : [],
         boqItems: boqSectionAllowed ? payload.boqItems.filter((item) => allowedProjectIdSet.has(item.project_id)) : [],
         dailyReports: dailyReportSectionAllowed ? payload.dailyReports.filter((report) => allowedProjectIdSet.has(report.project_id)) : [],
-        dailyReportWorkers: dailyReportSectionAllowed ? payload.dailyReportWorkers.filter((worker) => allowedProjectIdSet.has(worker.project_id)) : [],
+        dailyReportWorkers: dailyReportSectionAllowed
+          ? payload.dailyReportWorkers
+              .filter((worker) => allowedProjectIdSet.has(worker.project_id))
+              .map((worker) => (includeCompanyHr ? worker : { ...worker, crew_id: null }))
+          : [],
         dailyReportProgressUpdates: dailyReportSectionAllowed
           ? payload.dailyReportProgressUpdates.filter((update) => allowedProjectIdSet.has(update.project_id))
           : [],
@@ -1367,7 +1371,9 @@ export async function syncDataToSupabaseWithClient(
         boqCategories: boqSectionAllowed ? payload.boqCategories : [],
         boqItems: boqSectionAllowed ? payload.boqItems : [],
         dailyReports: dailyReportSectionAllowed ? payload.dailyReports : [],
-        dailyReportWorkers: dailyReportSectionAllowed ? payload.dailyReportWorkers : [],
+        dailyReportWorkers: dailyReportSectionAllowed
+          ? payload.dailyReportWorkers.map((worker) => (includeCompanyHr ? worker : { ...worker, crew_id: null }))
+          : [],
         dailyReportProgressUpdates: dailyReportSectionAllowed ? payload.dailyReportProgressUpdates : [],
         hrCrews: includeCompanyHr ? payload.hrCrews : [],
         hrLaborExpenses: includeCompanyHr ? payload.hrLaborExpenses : [],
