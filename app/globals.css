@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light only;
+  --background: #f5f7f4;
+  --foreground: #0f172a;
+  --pcon-brand-50: #ecfdf5;
+  --pcon-brand-100: #d1fae5;
+  --pcon-brand-600: #059669;
+  --pcon-brand-700: #047857;
+  --pcon-brand-900: #064e3b;
+  --pcon-surface: #ffffff;
+  --pcon-border: rgba(203, 213, 225, 0.72);
+  --pcon-radius-card: 1.25rem;
+  --pcon-shadow-card: 0 10px 30px rgba(15, 23, 42, 0.055);
+  --pcon-tap-target: 44px;
+  --pcon-focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.32);
+  --pcon-motion-fast: 160ms;
+  --app-base-font-size: 18px;
+  --pcon-desktop-sidebar-width: 13rem;
+  --pcon-desktop-content-gutter: 1.5rem;
+  --pcon-desktop-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --background: #ffffff;
+    --app-base-font-size: 16px;
+    --pcon-radius-card: 1rem;
+    --pcon-shadow-card: 0 4px 16px rgba(15, 23, 42, 0.06);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  background: var(--background);
+  color-scheme: light only;
+  font-size: var(--app-base-font-size);
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  color-scheme: light only;
+  font-family: var(--font-sarabun), "Sarabun", "Noto Sans Thai", "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+}
+
+@media (min-width: 768px) {
+  body {
+    font-family: var(--font-ibm-plex-sans-thai), "IBM Plex Sans Thai", var(--font-sarabun), "Noto Sans Thai", "Segoe UI", Arial, sans-serif;
+  }
+}
+
+main[data-landing-page] {
+  font-family: var(--font-sarabun), "Sarabun", "Noto Sans Thai", "Segoe UI", Arial, sans-serif;
+}
+
+html:has(main[data-landing-page]),
+body:has(main[data-landing-page]) {
+  overflow-x: clip;
+}
+
+.font-heading {
+  font-family: var(--font-mitr), "Mitr", var(--font-sarabun), "Sarabun", sans-serif;
+}
+
+.landing-drafting-grid {
+  background-image:
+    linear-gradient(rgba(6, 95, 70, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 95, 70, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root,
+  html,
+  body {
+    color-scheme: light only;
+    background: var(--background);
+    color: var(--foreground);
+  }
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(16, 185, 129, 0.32);
+  outline-offset: 2px;
+  box-shadow: var(--pcon-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-report-root,
+  .print-report-root * {
+    visibility: visible;
+  }
+
+  .print-report-root {
+    position: absolute;
+    inset: 0;
+  }
+
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
