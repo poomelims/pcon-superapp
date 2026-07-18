@@ -311,6 +311,13 @@ test("switches active project context between two projects", async ({ page }) =>
   const switcher = page.getByRole("button", { name: "เลือกโปรเจกต์ปัจจุบัน", exact: true });
   await expect(switcher).toContainText("Switch Beta");
   await switcher.click();
+  const mobilePicker = page.locator('[data-project-picker-overlay="mobile-top-sheet"]');
+  await expect(mobilePicker).toBeVisible();
+  await expect(mobilePicker.evaluate((element) => element.parentElement === document.body)).resolves.toBe(true);
+  const switcherBox = await switcher.boundingBox();
+  const pickerBox = await mobilePicker.boundingBox();
+  expect(pickerBox?.y).toBeGreaterThanOrEqual((switcherBox?.y ?? 0) + (switcherBox?.height ?? 0));
+  await expect(mobilePicker.getByRole("searchbox", { name: "ค้นหาโปรเจกต์" })).toBeFocused();
   await page.getByRole("button", { name: /Switch Alpha/ }).click();
   await expect(switcher).toContainText("Switch Alpha");
   await expect(page.locator("[data-mobile-project-layout]").getByLabel("ชื่อโปรเจกต์")).toHaveValue("Switch Alpha");
@@ -321,6 +328,19 @@ test("switches active project context between two projects", async ({ page }) =>
   await expect(page.locator("[data-mobile-project-layout]").getByLabel("ชื่อโปรเจกต์")).toHaveValue("Switch Beta");
   await expect(switcher).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByTestId("workspace-content-start")).toBeFocused();
+});
+
+test("opens the Desktop project search as a portal outside the workspace header", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/project-setup");
+  await page.getByRole("button", { name: "สร้างโปรเจกต์ใหม่", exact: true }).first().click();
+
+  const searchInput = page.getByRole("searchbox", { name: "ค้นหาโปรเจกต์" });
+  await searchInput.focus();
+  const desktopPicker = page.locator('[data-project-picker-overlay="desktop-popover"]');
+  await expect(desktopPicker).toBeVisible();
+  await expect(desktopPicker.evaluate((element) => element.parentElement === document.body)).resolves.toBe(true);
+  await expect(desktopPicker.getByRole("button", { name: /โปรเจกต์ 1/ }).first()).toBeVisible();
 });
 
 test("uses the Daily Report mobile anatomy across Dashboard, Project, HR, and BUYIN", async ({ page }) => {

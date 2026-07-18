@@ -52,6 +52,7 @@ import { numberFromInput, tradeOptions } from "../shared/utils";
 import { DailyQuickSection } from "./daily-quick-section";
 import { DailySaveBar } from "./daily-save-bar";
 import { DailyWorkItemEditor } from "./daily-work-item-editor";
+import { ProgressPercentInput } from "./progress-percent-input";
 
 type DailyMobileSection = DailyQuickSectionId;
 const taskStatusOptions: Array<DailyWorker["taskStatus"]> = ["ดำเนินการ", "แก้ไข", "เสร็จ"];
@@ -1006,7 +1007,11 @@ export function DailyReportView({
                 <p className="text-sm font-black text-slate-800">{update.title || "BOQ item"}</p>
                 <div className="grid grid-cols-[1fr_90px] items-center gap-2">
                   <p className="text-xs text-slate-500">เดิม {update.previousProgress}%</p>
-                  <TextInput aria-label={`ความคืบหน้า ${update.title}`} type="number" min={0} max={100} value={update.newProgress} onChange={(event) => updateProgressUpdate(update.id, { newProgress: numberFromInput(event.target.value) })} />
+                  <ProgressPercentInput
+                    ariaLabel={`ความคืบหน้า ${update.title}`}
+                    value={update.newProgress}
+                    onCommit={(newProgress) => updateProgressUpdate(update.id, { newProgress })}
+                  />
                 </div>
                 <TextInput value={update.note} placeholder="หมายเหตุ" onChange={(event) => updateProgressUpdate(update.id, { note: event.target.value })} />
               </div>
@@ -1303,12 +1308,10 @@ export function DailyReportView({
                       </Field>
                       <Field label="New %">
                         <div className="grid gap-2">
-                          <TextInput
-                            type="number"
-                            min={0}
-                            max={100}
+                          <ProgressPercentInput
+                            ariaLabel="New %"
                             value={update.newProgress}
-                            onChange={(event) => updateProgressUpdate(update.id, { newProgress: numberFromInput(event.target.value) })}
+                            onCommit={(newProgress) => updateProgressUpdate(update.id, { newProgress })}
                           />
                           <div className="flex flex-wrap gap-1.5">
                             {DAILY_PROGRESS_PRESETS.map((preset) => (

@@ -2,7 +2,7 @@
 
 import { normalizeDailyWorkItems, serializeDailyWorkItems } from "@/lib/project-control/daily-work-items";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   calculateBuyinNetAmount,
@@ -93,6 +93,7 @@ import { VersionBadge } from "./version-badge";
 import { MobileReferenceTabs, MobileShellIcon, PconReferenceMark } from "./mobile-shell-ui";
 import { BuyinView, DailyReportView, DashboardView, HrView, PrintDailyReportSheet, ProjectInfoView } from "./features/feature-loaders";
 import { DesktopToolMenu } from "./features/shared/desktop-module-ui";
+import { ProjectPickerOverlay } from "./project-picker-overlay";
 
 const loadLocalData = browserProjectControlRepository.load;
 const saveLocalData = browserProjectControlRepository.save;
@@ -753,10 +754,13 @@ export function ProjectControlWorkspace() {
   const [smileGreetingEmoji, setSmileGreetingEmoji] = useState("");
   const importInputRef = useRef<HTMLInputElement>(null);
   const pdfExportRef = useRef<HTMLDivElement | null>(null);
-  const projectSearchPanelRef = useRef<HTMLFormElement | null>(null);
+  const [projectSearchAnchor, setProjectSearchAnchor] = useState<HTMLFormElement | null>(null);
+  const [mobileProjectSwitcherAnchor, setMobileProjectSwitcherAnchor] = useState<HTMLButtonElement | null>(null);
   const contentStartRef = useRef<HTMLDivElement | null>(null);
   const dailyStatusProjectRef = useRef<string | null>(null);
   const memberAccess = useMemberAccess();
+  const closeMobileProjectPicker = useCallback(() => setIsMobileProjectSwitcherOpen(false), []);
+  const closeDesktopProjectPicker = useCallback(() => setIsProjectSearchOpen(false), []);
 
   function focusWorkspaceContentStart() {
     window.requestAnimationFrame(() => {
@@ -879,23 +883,6 @@ export function ProjectControlWorkspace() {
     const today = todayString();
     return activeReports.find((report) => report.reportDate < today) ?? null;
   }, [activeReports]);
-  const filteredProjectSearchResults = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    const normalizedQuery = projectSearchQuery.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return [];
-    }
-
-    return sortProjectsForDisplay(
-      companyProjects.filter((project) => (project.name || "").toLowerCase().includes(normalizedQuery)),
-      todayString()
-    ).slice(0, 6);
-  }, [companyProjects, data, projectSearchQuery]);
-
   useEffect(() => {
     const draftTimer = window.setTimeout(() => {
       if (!activeProject) {
@@ -928,24 +915,6 @@ export function ProjectControlWorkspace() {
 
     return () => window.clearTimeout(draftTimer);
   }, [activeProject, activeReports, latestPriorReport]);
-
-  useEffect(() => {
-    if (!isProjectSearchOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!projectSearchPanelRef.current?.contains(event.target as Node)) {
-        setIsProjectSearchOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [isProjectSearchOpen]);
 
   useEffect(() => {
     function refreshLocalGreeting() {
@@ -2628,12 +2597,19 @@ export function ProjectControlWorkspace() {
                       </div>
 
                       <button
+                        ref={setMobileProjectSwitcherAnchor}
                         type="button"
                         data-mobile-active-project
                         aria-expanded={isMobileProjectSwitcherOpen}
+                        aria-controls="project-picker-mobile-top-sheet"
                         aria-label="เลือกโปรเจกต์ปัจจุบัน"
                         className="flex h-12 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left shadow-sm"
-                        onClick={() => setIsMobileProjectSwitcherOpen((current) => !current)}
+                        onClick={() => {
+                          setProjectSearchQuery("");
+                          setIsProjectSearchOpen(false);
+                          setIsMobileWorkspaceMenuOpen(false);
+                          setIsMobileProjectSwitcherOpen((current) => !current);
+                        }}
                       >
                         <MobileShellIcon name="dashboard" className="h-5 w-5 shrink-0 text-slate-500" />
                         <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-slate-800">
@@ -2653,42 +2629,6 @@ export function ProjectControlWorkspace() {
                       </button>
                     </div>
 
-                    {isMobileProjectSwitcherOpen ? (
-                      <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-40 rounded-[22px] border border-emerald-100 bg-white p-2 shadow-[0_22px_40px_rgba(15,23,42,0.16)]">
-                        {companyProjects.length === 0 ? (
-                          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm font-bold text-slate-500">
-                            ยังไม่มีโปรเจกต์
-                          </div>
-                        ) : (
-                          <div className="grid max-h-[55vh] gap-2 overflow-y-auto">
-                            {companyProjects.map((project) => (
-                              <button
-                                key={project.id}
-                                type="button"
-                                className={`rounded-2xl border px-3 py-3 text-left transition ${
-                                  project.id === data.activeProjectId
-                                    ? "border-emerald-300 bg-emerald-50"
-                                    : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/70"
-                                }`}
-                                onClick={() => setActiveProjectFromMobile(project.id)}
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-black text-slate-950">{project.name || "ยังไม่มีชื่อโปรเจกต์"}</p>
-                                    <p className="mt-1 truncate text-xs font-bold text-slate-500">
-                                      {project.status || "ยังไม่ระบุสถานะ"}{project.customer.name ? ` • ${project.customer.name}` : ""}
-                                    </p>
-                                  </div>
-                                  <span className="shrink-0 rounded-full bg-slate-950 px-2.5 py-1 text-[10px] font-black text-white">
-                                    {Math.round(calculateWeightedProgress(project))}%
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
                   </div>
 
                   <div
@@ -2720,8 +2660,9 @@ export function ProjectControlWorkspace() {
                         </button>
 
                         <form
-                          ref={projectSearchPanelRef}
+                          ref={setProjectSearchAnchor}
                           data-desktop-project-switcher
+                          aria-controls="project-picker-desktop-popover"
                           className="relative flex min-h-12 items-start gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
                           onSubmit={(event: FormEvent<HTMLFormElement>) => {
                             event.preventDefault();
@@ -2738,7 +2679,10 @@ export function ProjectControlWorkspace() {
                               type="search"
                               value={projectSearchQuery}
                               placeholder="ค้นหาชื่อโปรเจกต์"
-                              onFocus={() => setIsProjectSearchOpen(true)}
+                              onFocus={() => {
+                                setIsMobileProjectSwitcherOpen(false);
+                                setIsProjectSearchOpen(true);
+                              }}
                               onChange={(event) => {
                                 setProjectSearchQuery(event.target.value);
                                 setIsProjectSearchOpen(true);
@@ -2754,49 +2698,6 @@ export function ProjectControlWorkspace() {
                             ค้นหา
                           </button>
 
-                          {isProjectSearchOpen ? (
-                            <div className="absolute inset-x-4 top-[calc(100%-0.35rem)] z-20 rounded-[22px] border border-slate-200 bg-white p-2 shadow-[0_22px_40px_rgba(15,23,42,0.14)]">
-                              {projectSearchQuery.trim().length === 0 ? (
-                                <p className="rounded-2xl bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">พิมพ์ชื่อโปรเจกต์เพื่อเริ่มค้นหา</p>
-                              ) : filteredProjectSearchResults.length > 0 ? (
-                                <div className="grid gap-2">
-                                  {filteredProjectSearchResults.map((project) => (
-                                    <button
-                                      key={project.id}
-                                      type="button"
-                                      onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => openProjectFromSearch(project.id)}
-                                      className={`rounded-2xl border px-3 py-3 text-left transition ${
-                                        project.id === data?.activeProjectId
-                                          ? "border-emerald-200 bg-emerald-50"
-                                          : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/70"
-                                      }`}
-                                    >
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                          <p className="truncate text-sm font-black text-slate-950">{project.name || "ยังไม่มีชื่อโปรเจกต์"}</p>
-                                          <p className="mt-1 truncate text-xs text-slate-500">
-                                            {project.customer.siteAddress || project.customer.name || "ยังไม่ระบุไซต์งาน"}
-                                          </p>
-                                        </div>
-                                        <span className="shrink-0 rounded-full bg-slate-950 px-2.5 py-1 text-[10px] font-black text-white">
-                                          {Math.round(calculateWeightedProgress(project))}%
-                                        </span>
-                                      </div>
-                                      <div className="mt-2 flex items-center justify-between gap-3">
-                                        <span className="truncate text-xs font-semibold text-emerald-700">{project.status || "พร้อมเริ่มงาน"}</span>
-                                        <span className="shrink-0 text-xs font-bold text-slate-500">
-                                          {project.id === data?.activeProjectId ? "เปิดอยู่ตอนนี้" : "เลือกโปรเจกต์"}
-                                        </span>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="rounded-2xl bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">ไม่พบโปรเจกต์ที่ค้นหา</p>
-                              )}
-                            </div>
-                          ) : null}
                         </form>
                       </div>
 
@@ -2985,6 +2886,29 @@ export function ProjectControlWorkspace() {
                   </div>
                 ) : null}
               </header>
+
+              <ProjectPickerOverlay
+                open={isMobileProjectSwitcherOpen}
+                variant="mobile-top-sheet"
+                projects={companyProjects}
+                activeProjectId={data.activeProjectId}
+                query={projectSearchQuery}
+                anchor={mobileProjectSwitcherAnchor}
+                onQueryChange={setProjectSearchQuery}
+                onSelect={setActiveProjectFromMobile}
+                onClose={closeMobileProjectPicker}
+              />
+              <ProjectPickerOverlay
+                open={isProjectSearchOpen}
+                variant="desktop-popover"
+                projects={companyProjects}
+                activeProjectId={data.activeProjectId}
+                query={projectSearchQuery}
+                anchor={projectSearchAnchor}
+                onQueryChange={setProjectSearchQuery}
+                onSelect={openProjectFromSearch}
+                onClose={closeDesktopProjectPicker}
+              />
 
               <div
                 ref={contentStartRef}
