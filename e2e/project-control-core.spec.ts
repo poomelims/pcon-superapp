@@ -53,6 +53,14 @@ test("creates, persists, edits, deletes, exports, and imports the local core wor
   await progressInput.press("Backspace");
   await progressInput.type("60");
   await expect(progressInput).toHaveValue("60");
+  const previousProgressInput = desktopDaily.getByLabel("Previous %").first();
+  await previousProgressInput.click();
+  await previousProgressInput.press("Control+A");
+  await previousProgressInput.press("Backspace");
+  await previousProgressInput.type("55");
+  await previousProgressInput.press("Tab");
+  await expect(previousProgressInput).toHaveValue("55");
+  await expect(progressInput).toHaveValue("60");
   await desktopDaily.getByLabel("สรุปงานวันนี้", { exact: true }).fill("ตรวจงานโครงสร้างรอบเช้า");
   await desktopDaily.getByLabel("งานที่ทำเสร็จวันนี้").fill("เทคอนกรีตฐานราก");
   await desktopDaily.getByLabel("ชื่อช่าง / ทีม").fill("ทีมช่าง E2E");

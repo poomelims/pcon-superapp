@@ -1006,7 +1006,14 @@ export function DailyReportView({
               <div key={update.id} className="grid gap-2 rounded-xl border border-slate-200 p-3">
                 <p className="text-sm font-black text-slate-800">{update.title || "BOQ item"}</p>
                 <div className="grid grid-cols-[1fr_90px] items-center gap-2">
-                  <p className="text-xs text-slate-500">เดิม {update.previousProgress}%</p>
+                  <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500">เดิม</span>
+                    <ProgressPercentInput
+                      ariaLabel={`เดิม ${update.title}`}
+                      value={update.previousProgress}
+                      onCommit={(previousProgress) => updateProgressUpdate(update.id, { previousProgress })}
+                    />
+                  </div>
                   <ProgressPercentInput
                     ariaLabel={`ความคืบหน้า ${update.title}`}
                     value={update.newProgress}
@@ -1282,7 +1289,7 @@ export function DailyReportView({
                     ความคืบหน้าของ Project : {activeProject.name}
                   </h3>
                   <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
-                    รายการจาก BOQ ปัจจุบันเท่านั้น แก้ New % และ Note ได้ แล้วระบบจะอัปเดต weighted progress ตอน Save Report
+                    รายการจาก BOQ ปัจจุบันเท่านั้น แก้ Previous %, New % และ Note ได้ แล้วระบบจะอัปเดต weighted progress ตอน Save Report
                   </p>
                 </div>
               </div>
@@ -1302,9 +1309,11 @@ export function DailyReportView({
                         </div>
                       </Field>
                       <Field label="Previous %">
-                        <div className="flex min-h-11 items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
-                          {update.previousProgress}%
-                        </div>
+                        <ProgressPercentInput
+                          ariaLabel="Previous %"
+                          value={update.previousProgress}
+                          onCommit={(previousProgress) => updateProgressUpdate(update.id, { previousProgress })}
+                        />
                       </Field>
                       <Field label="New %">
                         <div className="grid gap-2">
